@@ -27,6 +27,9 @@ public class SecurityConfig {
                         .requestMatchers("/health", "/auth/providers", "/auth/csrf").permitAll()
                         .anyRequest().authenticated()
                 )
+                .exceptionHandling(handling -> handling.authenticationEntryPoint(
+                        (request, response, authException) -> response.sendError(HttpServletResponse.SC_UNAUTHORIZED)
+                ))
                 .oauth2Login(oauth -> oauth
                         .userInfoEndpoint(userInfo -> userInfo.userService(oauthUserService))
                         .defaultSuccessUrl(properties.frontendUrl(), true)
