@@ -4,11 +4,12 @@ import com.jobplanner.model.*;
 import com.jobplanner.config.AppProperties;
 import com.jobplanner.service.PlannerStore;
 import com.jobplanner.service.PlannerService;
+import com.jobplanner.service.TokenService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
-import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,11 +20,13 @@ public class ApiController {
     private final PlannerStore store;
     private final PlannerService plannerService;
     private final AppProperties properties;
+    private final TokenService tokenService;
 
-    public ApiController(PlannerStore store, PlannerService plannerService, AppProperties properties) {
+    public ApiController(PlannerStore store, PlannerService plannerService, AppProperties properties, TokenService tokenService) {
         this.store = store;
         this.plannerService = plannerService;
         this.properties = properties;
+        this.tokenService = tokenService;
     }
 
     @GetMapping("/health")
@@ -40,14 +43,19 @@ public class ApiController {
         );
     }
 
-    @GetMapping("/auth/csrf")
-    public Map<String, String> csrf(CsrfToken token) {
-        return Map.of("token", token.getToken());
+    @GetMapping("/auth/me")
+    public ResponseEntity<AuthUser> me(Authentication authentication) {
+        AuthUser user = optionalCurrentUser(authentication);
+        return user == null ? ResponseEntity.noContent().build() : ResponseEntity.ok(user);
     }
 
-    @GetMapping("/auth/me")
-    public AuthUser me(Authentication authentication) {
-        return currentUser(authentication);
+    @PostMapping("/auth/logout")
+    public ResponseEntity<Void> logout(HttpServletRequest request) {
+        String header = request.getHeader("Authorization");
+        if (header != null && header.startsWith("Bearer ")) {
+            tokenService.revoke(header.substring(7));
+        }
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/profile")
@@ -121,14 +129,25 @@ public class ApiController {
     }
 
     private AuthUser currentUser(Authentication authentication) {
-        if (authentication == null || !(authentication.getPrincipal() instanceof OAuth2User user)) {
-            throw new IllegalStateException("Not authenticated");
-        }
-        Object value = user.getAttribute("plannerUser");
-        if (value instanceof AuthUser authUser) {
-            return authUser;
+        AuthUser user = optionalCurrentUser(authentication);
+        if (user != null) {
+            return user;
         }
         throw new IllegalStateException("Not authenticated");
+    }
+
+    private AuthUser optionalCurrentUser(Authentication authentication) {
+        if (authentication == null) {
+            return null;
+        }
+        Object principal = authentication.getPrincipal();
+        if (principal instanceof AuthUser authUser) {
+            return authUser;
+        }
+        if (principal instanceof OAuth2User oAuth2User && oAuth2User.getAttribute("plannerUser") instanceof AuthUser authUser) {
+            return authUser;
+        }
+        return null;
     }
 
 }

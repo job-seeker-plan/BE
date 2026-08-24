@@ -20,4 +20,4 @@ Required runtime services:
 - OAuth provider credentials for Google/Kakao/Naver
 - `GOV_API` for Ontong Youth policy API
 
-For a complete local stack, run `docker compose -f BE/docker-compose.yml --env-file BE/.env up --build` from the shared parent directory. The AI container is internal-only; browsers call the Spring API on port `8000`.
+Run PostgreSQL, the AI service, and Spring Boot locally as described in the DOCS setup tutorial. Browsers call the Spring API on port `8000`; the AI service requires the shared internal token.
