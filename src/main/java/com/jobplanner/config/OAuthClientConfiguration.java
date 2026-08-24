@@ -24,21 +24,22 @@ public class OAuthClientConfiguration {
                     ClientAuthenticationMethod.CLIENT_SECRET_BASIC,
                     "https://accounts.google.com/o/oauth2/v2/auth",
                     "https://oauth2.googleapis.com/token",
-                    "https://openidconnect.googleapis.com/v1/userinfo", "sub", List.of("openid", "email", "profile")));
+                    "https://openidconnect.googleapis.com/v1/userinfo", "sub", List.of("openid", "email", "profile"),
+                    "https://www.googleapis.com/oauth2/v3/certs"));
         }
         if (properties.isKakaoConfigured()) {
             registrations.add(registration("kakao", properties.kakaoClientId(), properties.kakaoClientSecret(),
                     ClientAuthenticationMethod.CLIENT_SECRET_POST,
                     "https://kauth.kakao.com/oauth/authorize",
                     "https://kauth.kakao.com/oauth/token",
-                    "https://kapi.kakao.com/v2/user/me", "id", List.of("profile_nickname", "account_email")));
+                    "https://kapi.kakao.com/v2/user/me", "id", List.of("profile_nickname", "account_email"), null));
         }
         if (properties.isNaverConfigured()) {
             registrations.add(registration("naver", properties.naverClientId(), properties.naverClientSecret(),
                     ClientAuthenticationMethod.CLIENT_SECRET_POST,
                     "https://nid.naver.com/oauth2.0/authorize",
                     "https://nid.naver.com/oauth2.0/token",
-                    "https://openapi.naver.com/v1/nid/me", "response", List.of("name", "email")));
+                    "https://openapi.naver.com/v1/nid/me", "response", List.of("name", "email"), null));
         }
         return new MapClientRegistrationRepository(registrations);
     }
@@ -52,9 +53,10 @@ public class OAuthClientConfiguration {
             String tokenUri,
             String userInfoUri,
             String userNameAttribute,
-            List<String> scopes
+            List<String> scopes,
+            String jwkSetUri
     ) {
-        return ClientRegistration.withRegistrationId(registrationId)
+        ClientRegistration.Builder builder = ClientRegistration.withRegistrationId(registrationId)
                 .clientId(clientId)
                 .clientSecret(clientSecret)
                 .clientAuthenticationMethod(authenticationMethod)
@@ -65,8 +67,11 @@ public class OAuthClientConfiguration {
                 .tokenUri(tokenUri)
                 .userInfoUri(userInfoUri)
                 .userNameAttributeName(userNameAttribute)
-                .clientName(registrationId)
-                .build();
+                .clientName(registrationId);
+        if (jwkSetUri != null) {
+            builder.jwkSetUri(jwkSetUri);
+        }
+        return builder.build();
     }
 
     private static class MapClientRegistrationRepository implements ClientRegistrationRepository, Iterable<ClientRegistration> {
