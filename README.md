@@ -4,7 +4,7 @@ Spring Boot backend API.
 
 The frontend calls this backend only. The backend owns OAuth/session security, policy matching, cash-flow calculation, and proxy calls to the FastAPI AI service.
 
-전체 설치 절차는 [초기 세팅 튜토리얼](docs/초기_세팅_튜토리얼.md)을 확인하세요.
+전체 설치 절차는 [DOCS 초기 세팅 튜토리얼](https://github.com/job-seeker-plan/DOCS/blob/main/INITIAL_SETUP.md)을 확인하세요.
 
 ## Run
 
