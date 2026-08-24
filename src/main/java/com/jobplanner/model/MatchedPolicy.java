@@ -1,0 +1,73 @@
+package com.jobplanner.model;
+
+import java.util.List;
+
+public record MatchedPolicy(
+        String id,
+        String name,
+        String region,
+        int minAge,
+        int maxAge,
+        EmploymentStatus employmentStatus,
+        Long incomeLimit,
+        Long benefitAmount,
+        String benefitType,
+        String description,
+        String supportContent,
+        String supervisingAgency,
+        String operatingAgency,
+        boolean ageLimited,
+        String incomeTypeCode,
+        Long incomeMin,
+        String employmentCode,
+        String educationCode,
+        String specialConditionCode,
+        List<String> regionCodes,
+        String applyMethod,
+        String applyUrl,
+        String documents,
+        String qualificationText,
+        String restrictionText,
+        String updatedAt,
+        String applicationPeriod,
+        String source,
+        int matchScore,
+        List<String> matchedReasons,
+        List<String> missingReasons
+) {
+    public static MatchedPolicy from(Policy policy, int score, List<String> matchedReasons, List<String> missingReasons) {
+        return new MatchedPolicy(
+                policy.id(),
+                policy.name(),
+                policy.region(),
+                policy.minAge(),
+                policy.maxAge(),
+                policy.employmentStatus(),
+                policy.incomeLimit(),
+                policy.benefitAmount(),
+                policy.benefitType(),
+                policy.description(),
+                policy.supportContent(),
+                policy.supervisingAgency(),
+                policy.operatingAgency(),
+                policy.ageLimited(),
+                policy.incomeTypeCode(),
+                policy.incomeMin(),
+                policy.employmentCode(),
+                policy.educationCode(),
+                policy.specialConditionCode(),
+                policy.regionCodes(),
+                policy.applyMethod(),
+                policy.applyUrl(),
+                policy.documents(),
+                policy.qualificationText(),
+                policy.restrictionText(),
+                policy.updatedAt(),
+                policy.applicationPeriod(),
+                policy.source(),
+                score,
+                matchedReasons,
+                missingReasons
+        );
+    }
+}
