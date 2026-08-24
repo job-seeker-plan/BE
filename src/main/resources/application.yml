@@ -19,7 +19,11 @@ app:
 
 spring:
   config:
-    import: optional:file:.env[.properties]
+    # Works no matter which directory `mvn spring-boot:run` (or an IDE run
+    # configuration) is launched from: BE/.env is always the canonical file.
+    # `.env` covers running from inside BE/, `BE/.env` covers running from the
+    # project root (also the common case for IDE run configs).
+    import: optional:file:BE/.env[.properties],optional:file:.env[.properties]
   datasource:
     url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/job_planner}
     username: ${DATABASE_USERNAME:job_planner}
