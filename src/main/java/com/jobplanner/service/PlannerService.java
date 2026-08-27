@@ -71,7 +71,7 @@ public class PlannerService {
     }
 
     public List<MatchedPolicy> matchPolicies(UserProfile profile) {
-        return policyClient.fetchPolicies(new PolicySearchRequest(1, 100, "취업", "023010", null, null, null)).stream()
+        return policyClient.fetchPolicies(new PolicySearchRequest(1, 100, null, "취업", "일자리", null, null, null)).stream()
                 .map(policy -> matchPolicy(policy, profile))
                 .sorted(Comparator.comparing(MatchedPolicy::matchScore).reversed())
                 .toList();

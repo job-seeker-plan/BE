@@ -23,7 +23,11 @@ import java.util.Map;
 
 @Service
 public class YouthPolicyClient {
-    private static final String API_URL = "https://www.youthcenter.go.kr/opi/youthPlcyList.do";
+    // 온통청년 Open API moved off the legacy /opi/youthPlcyList.do path (now dead —
+    // redirects to an unreachable internal port) onto this endpoint, with renamed
+    // query params (apiKeyNm/pageNum/pageSize) and name-based classification
+    // filters (lclsfNm/mclsfNm) replacing the old numeric business-type codes.
+    private static final String API_URL = "https://www.youthcenter.go.kr/go/ythip/getPlcy";
 
     private final AppProperties properties;
     private final HttpClient httpClient = HttpClient.newBuilder()
@@ -40,17 +44,19 @@ public class YouthPolicyClient {
             throw new IllegalStateException("GOV_API is required");
         }
         PolicySearchRequest effective = search == null
-                ? new PolicySearchRequest(1, 100, "취업", "023010", null, null, null)
+                ? new PolicySearchRequest(1, 100, null, "취업", "일자리", null, null, null)
                 : search;
         URI uri = UriComponentsBuilder.fromHttpUrl(API_URL)
-                .queryParam("openApiVlak", properties.govApiKey())
-                .queryParam("pageIndex", effective.page() == 0 ? 1 : effective.page())
-                .queryParam("display", effective.display() == 0 ? 20 : effective.display())
-                .queryParamIfPresent("query", optional(effective.query()))
-                .queryParamIfPresent("bizTycdSel", optional(effective.bizTycdSel()))
-                .queryParamIfPresent("srchPolyBizSecd", optional(effective.srchPolyBizSecd()))
-                .queryParamIfPresent("keyword", optional(effective.keyword()))
-                .queryParamIfPresent("srchPolicyId", optional(effective.srchPolicyId()))
+                .queryParam("apiKeyNm", properties.govApiKey())
+                .queryParam("pageNum", effective.page() == 0 ? 1 : effective.page())
+                .queryParam("pageSize", effective.display() == 0 ? 20 : effective.display())
+                .queryParam("rtnType", "xml")
+                .queryParamIfPresent("plcyNm", optional(effective.plcyNm()))
+                .queryParamIfPresent("plcyKywdNm", optional(effective.plcyKywdNm()))
+                .queryParamIfPresent("lclsfNm", optional(effective.lclsfNm()))
+                .queryParamIfPresent("mclsfNm", optional(effective.mclsfNm()))
+                .queryParamIfPresent("zipCd", optional(effective.zipCd()))
+                .queryParamIfPresent("plcyNo", optional(effective.plcyNo()))
                 .build()
                 .encode()
                 .toUri();
@@ -142,7 +148,7 @@ public class YouthPolicyClient {
                 nullableLong(first(row, "earnMinAmt")),
                 employmentCode,
                 first(row, "schoolCd"),
-                first(row, "sbizCd"),
+                first(row, "sBizCd", "sbizCd"),
                 regionCodes,
                 first(row, "plcyAplyMthdCn"),
                 first(row, "aplyUrlAddr", "refUrlAddr1"),
