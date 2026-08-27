@@ -17,7 +17,13 @@ public class AiClient {
     private final String serviceToken;
 
     public AiClient(AppProperties properties) {
+        // Java's HttpClient defaults to attempting an HTTP/1.1->h2c upgrade on
+        // plaintext connections. uvicorn doesn't support that upgrade, and the
+        // client sends the POST body as an empty chunked stream while waiting on
+        // it, so the AI service sees a request with no body at all. Pinning the
+        // client to HTTP/1.1 skips the upgrade attempt entirely.
         JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(HttpClient.newBuilder()
+                .version(HttpClient.Version.HTTP_1_1)
                 .connectTimeout(Duration.ofSeconds(3))
                 .build());
         requestFactory.setReadTimeout(Duration.ofSeconds(10));
