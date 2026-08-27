@@ -6,11 +6,11 @@ import jakarta.validation.constraints.Min;
 public record PolicySearchRequest(
         @Min(1) int page,
         @Min(1) @Max(100) int display,
-        String query,
-        String bizTycdSel,
-        String srchPolyBizSecd,
-        String keyword,
-        String srchPolicyId
+        String plcyNm,
+        String plcyKywdNm,
+        String lclsfNm,
+        String mclsfNm,
+        String zipCd,
+        String plcyNo
 ) {
 }
-
