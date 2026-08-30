@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.Optional;
 
 @Service
 public class PlannerStore {
@@ -55,6 +56,27 @@ public class PlannerStore {
                 payload.eventDate(), payload.expectedCost(), payload.memo() == null ? "" : payload.memo()
         ));
         return event(saved);
+    }
+
+    @Transactional
+    public Optional<JobEvent> updateEvent(String userId, String eventId, JobEventCreate payload) {
+        return events.findById(eventId)
+                .filter(event -> event.getUserId().equals(userId))
+                .map(event -> {
+                    event.update(payload.title(), payload.eventType(), payload.eventDate(), payload.expectedCost(), payload.memo() == null ? "" : payload.memo());
+                    return event(event);
+                });
+    }
+
+    @Transactional
+    public boolean deleteEvent(String userId, String eventId) {
+        return events.findById(eventId)
+                .filter(event -> event.getUserId().equals(userId))
+                .map(event -> {
+                    events.delete(event);
+                    return true;
+                })
+                .orElse(false);
     }
 
     @Transactional(readOnly = true)

@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @RestController
 public class ApiController {
@@ -88,6 +89,18 @@ public class ApiController {
     @PostMapping("/events")
     public JobEvent addEvent(Authentication authentication, @Valid @RequestBody JobEventCreate payload) {
         return store.addEvent(currentUser(authentication).userId(), payload);
+    }
+
+    @PutMapping("/events/{eventId}")
+    public ResponseEntity<JobEvent> updateEvent(Authentication authentication, @PathVariable String eventId, @Valid @RequestBody JobEventCreate payload) {
+        Optional<JobEvent> updated = store.updateEvent(currentUser(authentication).userId(), eventId, payload);
+        return updated.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @DeleteMapping("/events/{eventId}")
+    public ResponseEntity<Void> deleteEvent(Authentication authentication, @PathVariable String eventId) {
+        boolean deleted = store.deleteEvent(currentUser(authentication).userId(), eventId);
+        return deleted ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
     }
 
     @GetMapping("/financial-records")
