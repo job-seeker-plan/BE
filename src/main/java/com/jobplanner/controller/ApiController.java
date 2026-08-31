@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 @RestController
 public class ApiController {
@@ -91,16 +90,36 @@ public class ApiController {
         return store.addEvent(currentUser(authentication).userId(), payload);
     }
 
-    @PutMapping("/events/{eventId}")
-    public ResponseEntity<JobEvent> updateEvent(Authentication authentication, @PathVariable String eventId, @Valid @RequestBody JobEventCreate payload) {
-        Optional<JobEvent> updated = store.updateEvent(currentUser(authentication).userId(), eventId, payload);
-        return updated.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+    @PutMapping("/events/{id}")
+    public JobEvent updateEvent(Authentication authentication, @PathVariable String id, @Valid @RequestBody JobEventCreate payload) {
+        return store.updateEvent(id, currentUser(authentication).userId(), payload);
     }
 
-    @DeleteMapping("/events/{eventId}")
-    public ResponseEntity<Void> deleteEvent(Authentication authentication, @PathVariable String eventId) {
-        boolean deleted = store.deleteEvent(currentUser(authentication).userId(), eventId);
-        return deleted ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
+    @DeleteMapping("/events/{id}")
+    public ResponseEntity<Void> deleteEvent(Authentication authentication, @PathVariable String id) {
+        store.deleteEvent(id, currentUser(authentication).userId());
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/transactions")
+    public List<FinanceTransaction> transactions(Authentication authentication) {
+        return store.listTransactions(currentUser(authentication).userId());
+    }
+
+    @PostMapping("/transactions")
+    public FinanceTransaction addTransaction(Authentication authentication, @Valid @RequestBody FinanceTransactionCreate payload) {
+        return store.addTransaction(currentUser(authentication).userId(), payload);
+    }
+
+    @PutMapping("/transactions/{id}")
+    public FinanceTransaction updateTransaction(Authentication authentication, @PathVariable String id, @Valid @RequestBody FinanceTransactionCreate payload) {
+        return store.updateTransaction(id, currentUser(authentication).userId(), payload);
+    }
+
+    @DeleteMapping("/transactions/{id}")
+    public ResponseEntity<Void> deleteTransaction(Authentication authentication, @PathVariable String id) {
+        store.deleteTransaction(id, currentUser(authentication).userId());
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/financial-records")

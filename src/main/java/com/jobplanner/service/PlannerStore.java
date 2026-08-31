@@ -1,10 +1,14 @@
 package com.jobplanner.service;
 
+import com.jobplanner.model.FinanceTransaction;
+import com.jobplanner.model.FinanceTransactionCreate;
 import com.jobplanner.model.FinancialRecord;
 import com.jobplanner.model.FinancialRecordCreate;
 import com.jobplanner.model.JobEvent;
 import com.jobplanner.model.JobEventCreate;
 import com.jobplanner.model.UserProfile;
+import com.jobplanner.persistence.FinanceTransactionEntity;
+import com.jobplanner.persistence.FinanceTransactionRepository;
 import com.jobplanner.persistence.FinancialRecordEntity;
 import com.jobplanner.persistence.FinancialRecordRepository;
 import com.jobplanner.persistence.JobEventEntity;
@@ -16,18 +20,19 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
-import java.util.Optional;
 
 @Service
 public class PlannerStore {
     private final ProfileRepository profiles;
     private final JobEventRepository events;
     private final FinancialRecordRepository records;
+    private final FinanceTransactionRepository transactions;
 
-    public PlannerStore(ProfileRepository profiles, JobEventRepository events, FinancialRecordRepository records) {
+    public PlannerStore(ProfileRepository profiles, JobEventRepository events, FinancialRecordRepository records, FinanceTransactionRepository transactions) {
         this.profiles = profiles;
         this.events = events;
         this.records = records;
+        this.transactions = transactions;
     }
 
     @Transactional(readOnly = true)
@@ -59,24 +64,65 @@ public class PlannerStore {
     }
 
     @Transactional
-    public Optional<JobEvent> updateEvent(String userId, String eventId, JobEventCreate payload) {
-        return events.findById(eventId)
-                .filter(event -> event.getUserId().equals(userId))
-                .map(event -> {
-                    event.update(payload.title(), payload.eventType(), payload.eventDate(), payload.expectedCost(), payload.memo() == null ? "" : payload.memo());
-                    return event(event);
-                });
+    public JobEvent updateEvent(String id, String userId, JobEventCreate payload) {
+        JobEventEntity entity = requireOwnedEvent(id, userId);
+        entity.setTitle(payload.title());
+        entity.setEventType(payload.eventType());
+        entity.setEventDate(payload.eventDate());
+        entity.setExpectedCost(payload.expectedCost());
+        entity.setMemo(payload.memo() == null ? "" : payload.memo());
+        return event(events.save(entity));
     }
 
     @Transactional
-    public boolean deleteEvent(String userId, String eventId) {
-        return events.findById(eventId)
-                .filter(event -> event.getUserId().equals(userId))
-                .map(event -> {
-                    events.delete(event);
-                    return true;
-                })
-                .orElse(false);
+    public void deleteEvent(String id, String userId) {
+        events.delete(requireOwnedEvent(id, userId));
+    }
+
+    private JobEventEntity requireOwnedEvent(String id, String userId) {
+        JobEventEntity entity = events.findById(id).orElseThrow(() -> new IllegalStateException("Event not found"));
+        if (!entity.getUserId().equals(userId)) {
+            throw new IllegalStateException("Event not found");
+        }
+        return entity;
+    }
+
+    @Transactional(readOnly = true)
+    public List<FinanceTransaction> listTransactions(String userId) {
+        return transactions.findByUserIdOrderByOccurredOnAsc(userId).stream().map(this::transaction).toList();
+    }
+
+    @Transactional
+    public FinanceTransaction addTransaction(String userId, FinanceTransactionCreate payload) {
+        FinanceTransactionEntity saved = transactions.save(new FinanceTransactionEntity(
+                "txn-" + UUID.randomUUID().toString().substring(0, 10), userId, payload.occurredOn(), payload.type(),
+                payload.category(), payload.amount(), payload.memo() == null ? "" : payload.memo()
+        ));
+        return transaction(saved);
+    }
+
+    @Transactional
+    public FinanceTransaction updateTransaction(String id, String userId, FinanceTransactionCreate payload) {
+        FinanceTransactionEntity entity = requireOwnedTransaction(id, userId);
+        entity.setOccurredOn(payload.occurredOn());
+        entity.setType(payload.type());
+        entity.setCategory(payload.category());
+        entity.setAmount(payload.amount());
+        entity.setMemo(payload.memo() == null ? "" : payload.memo());
+        return transaction(transactions.save(entity));
+    }
+
+    @Transactional
+    public void deleteTransaction(String id, String userId) {
+        transactions.delete(requireOwnedTransaction(id, userId));
+    }
+
+    private FinanceTransactionEntity requireOwnedTransaction(String id, String userId) {
+        FinanceTransactionEntity entity = transactions.findById(id).orElseThrow(() -> new IllegalStateException("Transaction not found"));
+        if (!entity.getUserId().equals(userId)) {
+            throw new IllegalStateException("Transaction not found");
+        }
+        return entity;
     }
 
     @Transactional(readOnly = true)
@@ -104,5 +150,9 @@ public class PlannerStore {
 
     private FinancialRecord record(FinancialRecordEntity value) {
         return new FinancialRecord(value.getUserId(), value.getMonth(), value.getSpend(), value.getBill(), value.getBalance(), value.getCreditScore(), value.getIncome());
+    }
+
+    private FinanceTransaction transaction(FinanceTransactionEntity value) {
+        return new FinanceTransaction(value.getId(), value.getUserId(), value.getOccurredOn(), value.getType(), value.getCategory(), value.getAmount(), value.getMemo());
     }
 }
