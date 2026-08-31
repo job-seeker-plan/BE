@@ -90,6 +90,38 @@ public class ApiController {
         return store.addEvent(currentUser(authentication).userId(), payload);
     }
 
+    @PutMapping("/events/{id}")
+    public JobEvent updateEvent(Authentication authentication, @PathVariable String id, @Valid @RequestBody JobEventCreate payload) {
+        return store.updateEvent(id, currentUser(authentication).userId(), payload);
+    }
+
+    @DeleteMapping("/events/{id}")
+    public ResponseEntity<Void> deleteEvent(Authentication authentication, @PathVariable String id) {
+        store.deleteEvent(id, currentUser(authentication).userId());
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/transactions")
+    public List<FinanceTransaction> transactions(Authentication authentication) {
+        return store.listTransactions(currentUser(authentication).userId());
+    }
+
+    @PostMapping("/transactions")
+    public FinanceTransaction addTransaction(Authentication authentication, @Valid @RequestBody FinanceTransactionCreate payload) {
+        return store.addTransaction(currentUser(authentication).userId(), payload);
+    }
+
+    @PutMapping("/transactions/{id}")
+    public FinanceTransaction updateTransaction(Authentication authentication, @PathVariable String id, @Valid @RequestBody FinanceTransactionCreate payload) {
+        return store.updateTransaction(id, currentUser(authentication).userId(), payload);
+    }
+
+    @DeleteMapping("/transactions/{id}")
+    public ResponseEntity<Void> deleteTransaction(Authentication authentication, @PathVariable String id) {
+        store.deleteTransaction(id, currentUser(authentication).userId());
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/financial-records")
     public List<FinancialRecord> records(Authentication authentication) {
         return store.listRecords(currentUser(authentication).userId());

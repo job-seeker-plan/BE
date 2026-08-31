@@ -42,4 +42,10 @@ public class JobEventEntity {
     public LocalDate getEventDate() { return eventDate; }
     public long getExpectedCost() { return expectedCost; }
     public String getMemo() { return memo; }
+
+    public void setTitle(String title) { this.title = title; }
+    public void setEventType(JobEventType eventType) { this.eventType = eventType; }
+    public void setEventDate(LocalDate eventDate) { this.eventDate = eventDate; }
+    public void setExpectedCost(long expectedCost) { this.expectedCost = expectedCost; }
+    public void setMemo(String memo) { this.memo = memo; }
 }
