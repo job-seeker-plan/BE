@@ -10,6 +10,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 @Service
 public class PlannerService {
@@ -24,7 +25,8 @@ public class PlannerService {
     }
 
     public PlanAnalysis buildPlan(UserProfile profile, ScenarioRequest scenario) {
-        Map<String, Object> prediction = aiClient.predictSpending(profile.userId(), store.listRecords(profile.userId()));
+        List<FinancialRecord> records = monthlyRecordsFromTransactions(profile.userId(), store.listTransactions(profile.userId()));
+        Map<String, Object> prediction = aiClient.predictSpending(profile.userId(), records);
         long predictedSpend = number(prediction.get("predicted_next_spend"));
         long recentAverage = number(prediction.get("recent_average_spend"));
         Map<String, Long> eventCosts = aggregateEventCosts(profile.userId(), scenario);
@@ -68,6 +70,30 @@ public class PlannerService {
                 flows,
                 guide(status, spendDelta, shortageMonth, recommendedLimit)
         );
+    }
+
+    // 대시보드의 소비 예측/피드백 기능을 가계부 캘린더로 옮기면서, AI 예측 입력값도
+    // 별도로 수기 입력하던 월별 금융 기록 대신 가계부에 실제로 기록된 거래 내역을
+    // 월별로 집계해서 사용한다. 카드 청구/한도 관련 필드(bill/balance/creditScore)는
+    // 가계부에 없는 개념이라 0/null로 채우고, AI 서비스 쪽에서 결측으로 처리한다.
+    private List<FinancialRecord> monthlyRecordsFromTransactions(String userId, List<FinanceTransaction> transactions) {
+        Map<String, long[]> totalsByMonth = new TreeMap<>();
+        for (FinanceTransaction transaction : transactions) {
+            String month = YearMonth.from(transaction.occurredOn()).toString();
+            long[] totals = totalsByMonth.computeIfAbsent(month, key -> new long[2]);
+            if (transaction.type() == FinanceTransactionType.expense) {
+                totals[0] += transaction.amount();
+            } else {
+                totals[1] += transaction.amount();
+            }
+        }
+        List<FinancialRecord> records = new ArrayList<>();
+        for (Map.Entry<String, long[]> entry : totalsByMonth.entrySet()) {
+            long spend = entry.getValue()[0];
+            long income = entry.getValue()[1];
+            records.add(new FinancialRecord(userId, entry.getKey(), spend, 0, 0, null, income));
+        }
+        return records;
     }
 
     public List<MatchedPolicy> matchPolicies(UserProfile profile) {
