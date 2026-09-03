@@ -2,6 +2,7 @@ package com.jobplanner.controller;
 
 import com.jobplanner.model.*;
 import com.jobplanner.config.AppProperties;
+import com.jobplanner.service.AiClient;
 import com.jobplanner.service.PlannerStore;
 import com.jobplanner.service.PlannerService;
 import com.jobplanner.service.TokenService;
@@ -21,12 +22,14 @@ public class ApiController {
     private final PlannerService plannerService;
     private final AppProperties properties;
     private final TokenService tokenService;
+    private final AiClient aiClient;
 
-    public ApiController(PlannerStore store, PlannerService plannerService, AppProperties properties, TokenService tokenService) {
+    public ApiController(PlannerStore store, PlannerService plannerService, AppProperties properties, TokenService tokenService, AiClient aiClient) {
         this.store = store;
         this.plannerService = plannerService;
         this.properties = properties;
         this.tokenService = tokenService;
+        this.aiClient = aiClient;
     }
 
     @GetMapping("/health")
@@ -150,6 +153,16 @@ public class ApiController {
     @PostMapping("/scenario")
     public PlanAnalysis scenario(Authentication authentication, @Valid @RequestBody ScenarioRequest request) {
         return plannerService.buildPlan(requireProfile(authentication), request);
+    }
+
+    @GetMapping("/hiring/season")
+    public Map<String, Object> hiringSeason(@RequestParam String company, @RequestParam String jobFamily) {
+        return aiClient.hiringSeason(company, jobFamily);
+    }
+
+    @GetMapping("/hiring/companies")
+    public List<Map<String, Object>> hiringCompanies(@RequestParam(defaultValue = "") String q) {
+        return aiClient.hiringCompanies(q);
     }
 
     private UserProfile requireProfile(Authentication authentication) {

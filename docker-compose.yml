@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     environment:
       POSTGRES_DB: job_planner
       POSTGRES_USER: job_planner
@@ -17,6 +17,19 @@ services:
     build: ../AI
     environment:
       AI_SERVICE_TOKEN: ${AI_SERVICE_TOKEN:?Set AI_SERVICE_TOKEN in BE/.env or your shell}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      SARAMIN_ACCESS_KEY: ${SARAMIN_ACCESS_KEY:-}
+      # job_jd_embeddings 테이블은 V3 마이그레이션으로 이 postgres 서비스(job_planner
+      # DB)에 이미 생성돼있음 - 로컬 테스트용 pgvector-test 컨테이너(포트5433, host
+      # 기준 localhost)와는 별개. 컨테이너 안에서는 "postgres"가 서비스명이라 이걸로 접속.
+      PGVECTOR_HOST: postgres
+      PGVECTOR_PORT: "5432"
+      PGVECTOR_DB: job_planner
+      PGVECTOR_USER: job_planner
+      PGVECTOR_PASSWORD: ${DATABASE_PASSWORD:?Set DATABASE_PASSWORD in BE/.env or your shell}
+    depends_on:
+      postgres:
+        condition: service_healthy
     expose:
       - "8001"
 

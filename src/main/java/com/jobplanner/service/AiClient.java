@@ -46,4 +46,33 @@ public class AiClient {
                 .retrieve()
                 .body(Map.class);
     }
+
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> hiringSeason(String company, String jobFamily) {
+        if (serviceToken == null || serviceToken.isBlank()) {
+            throw new IllegalStateException("AI_SERVICE_TOKEN is required");
+        }
+        return restClient.get()
+                .uri(uriBuilder -> uriBuilder.path("/hiring/season")
+                        .queryParam("company", company)
+                        .queryParam("job_family", jobFamily)
+                        .build())
+                .header("X-Internal-Api-Key", serviceToken)
+                .retrieve()
+                .body(Map.class);
+    }
+
+    @SuppressWarnings("unchecked")
+    public List<Map<String, Object>> hiringCompanies(String query) {
+        if (serviceToken == null || serviceToken.isBlank()) {
+            throw new IllegalStateException("AI_SERVICE_TOKEN is required");
+        }
+        return restClient.get()
+                .uri(uriBuilder -> uriBuilder.path("/hiring/companies")
+                        .queryParam("q", query)
+                        .build())
+                .header("X-Internal-Api-Key", serviceToken)
+                .retrieve()
+                .body(List.class);
+    }
 }
