@@ -131,6 +131,12 @@ public class ApiController {
         return aiClient.searchLinkareerRecruitments(request.keyword(), request.categoryId(), request.regionId(), request.jobType(), request.page());
     }
 
+    @PostMapping("/financial-contexts")
+    public Map<String, Object> saveFinancialContexts(Authentication authentication, @Valid @RequestBody FinancialContextRequest request) {
+        AuthUser user = currentUser(authentication);
+        return aiClient.saveFinancialContexts(user.userId(), request.contexts());
+    }
+
     @GetMapping("/financial-records")
     public List<FinancialRecord> records(Authentication authentication) {
         return store.listRecords(currentUser(authentication).userId());

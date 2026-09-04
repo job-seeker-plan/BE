@@ -68,7 +68,7 @@ public class PlannerService {
                 recommendedLimit,
                 status,
                 flows,
-                guide(status, spendDelta, shortageMonth, recommendedLimit)
+                guide(profile.userId(), status, targetBalance, shortageMonth, recommendedLimit)
         );
     }
 
@@ -188,7 +188,17 @@ public class PlannerService {
         return Long.parseLong(String.valueOf(value));
     }
 
-    private String guide(String status, long spendDelta, String shortageMonth, long recommendedLimit) {
+    private String guide(String userId, String status, long targetBalance, String shortageMonth, long recommendedLimit) {
+        try {
+            Map<String, Object> response = aiClient.buildFinancialGuide(userId, status, targetBalance, shortageMonth, recommendedLimit);
+            Object guide = response.get("guide");
+            if (guide != null && !String.valueOf(guide).isBlank()) {
+                return String.valueOf(guide);
+            }
+        } catch (RuntimeException ignored) {
+            // The cash-flow calculation remains useful if the optional RAG
+            // service is unavailable; use the same deterministic fallback.
+        }
         if ("risk".equals(status)) {
             return shortageMonth + "에 자금 부족이 예상됩니다. 월 지출을 " + String.format("%,d", recommendedLimit) + "원 이하로 낮추고 정책 지원을 우선 확인하세요.";
         }

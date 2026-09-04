@@ -2,6 +2,7 @@ package com.jobplanner.service;
 
 import com.jobplanner.config.AppProperties;
 import com.jobplanner.model.FinancialRecord;
+import com.jobplanner.model.FinancialContextInput;
 import com.jobplanner.model.LinkareerRecruitmentResult;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
@@ -94,5 +95,38 @@ public class AiClient {
                 ))
                 .retrieve()
                 .body(LinkareerRecruitmentResult.class);
+    }
+
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> buildFinancialGuide(String userId, String status, long targetMonthBalance, String shortageMonth, long recommendedLimit) {
+        if (serviceToken == null || serviceToken.isBlank()) {
+            throw new IllegalStateException("AI_SERVICE_TOKEN is required");
+        }
+        return restClient.post()
+                .uri("/guide")
+                .header("X-Internal-Api-Key", serviceToken)
+                .body(Map.of(
+                        "user_id", userId,
+                        "status", status,
+                        "target_month_balance", targetMonthBalance,
+                        "shortage_month", shortageMonth == null ? "" : shortageMonth,
+                        "recommended_monthly_spend_limit", recommendedLimit,
+                        "related_category", "cashflow"
+                ))
+                .retrieve()
+                .body(Map.class);
+    }
+
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> saveFinancialContexts(String userId, List<FinancialContextInput> contexts) {
+        if (serviceToken == null || serviceToken.isBlank()) {
+            throw new IllegalStateException("AI_SERVICE_TOKEN is required");
+        }
+        return restClient.post()
+                .uri("/financial-contexts")
+                .header("X-Internal-Api-Key", serviceToken)
+                .body(Map.of("user_id", userId, "contexts", contexts))
+                .retrieve()
+                .body(Map.class);
     }
 }
