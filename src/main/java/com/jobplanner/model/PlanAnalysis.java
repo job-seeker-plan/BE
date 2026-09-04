@@ -14,7 +14,9 @@ public record PlanAnalysis(
         long recommendedMonthlySpendLimit,
         String status,
         List<MonthlyCashFlow> monthlyCashFlows,
-        String guide
+        String guide,
+        boolean guidePersonalized,
+        int guideContextCount
 ) {
 }
 

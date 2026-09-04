@@ -21,11 +21,12 @@ public class JobEventEntity {
     private LocalDate eventDate;
     private long expectedCost;
     private String memo;
+    private String sourceEmailId;
 
     protected JobEventEntity() {
     }
 
-    public JobEventEntity(String id, String userId, String title, JobEventType eventType, LocalDate eventDate, long expectedCost, String memo) {
+    public JobEventEntity(String id, String userId, String title, JobEventType eventType, LocalDate eventDate, long expectedCost, String memo, String sourceEmailId) {
         this.id = id;
         this.userId = userId;
         this.title = title;
@@ -33,6 +34,7 @@ public class JobEventEntity {
         this.eventDate = eventDate;
         this.expectedCost = expectedCost;
         this.memo = memo;
+        this.sourceEmailId = sourceEmailId;
     }
 
     public String getId() { return id; }
@@ -42,6 +44,7 @@ public class JobEventEntity {
     public LocalDate getEventDate() { return eventDate; }
     public long getExpectedCost() { return expectedCost; }
     public String getMemo() { return memo; }
+    public String getSourceEmailId() { return sourceEmailId; }
 
     public void setTitle(String title) { this.title = title; }
     public void setEventType(JobEventType eventType) { this.eventType = eventType; }

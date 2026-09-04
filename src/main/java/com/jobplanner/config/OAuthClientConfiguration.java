@@ -24,7 +24,8 @@ public class OAuthClientConfiguration {
                     ClientAuthenticationMethod.CLIENT_SECRET_BASIC,
                     "https://accounts.google.com/o/oauth2/v2/auth",
                     "https://oauth2.googleapis.com/token",
-                    "https://openidconnect.googleapis.com/v1/userinfo", "sub", List.of("openid", "email", "profile"),
+                    "https://openidconnect.googleapis.com/v1/userinfo", "sub",
+                    List.of("openid", "email", "profile", "https://www.googleapis.com/auth/gmail.readonly"),
                     "https://www.googleapis.com/oauth2/v3/certs"));
         }
         if (properties.isKakaoConfigured()) {

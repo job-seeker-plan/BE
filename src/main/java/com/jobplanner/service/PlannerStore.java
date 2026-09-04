@@ -18,8 +18,11 @@ import com.jobplanner.persistence.ProfileRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class PlannerStore {
@@ -54,11 +57,23 @@ public class PlannerStore {
         return events.findByUserIdOrderByEventDateAsc(userId).stream().map(this::event).toList();
     }
 
+    @Transactional(readOnly = true)
+    public Set<String> importedEmailIds(String userId) {
+        // A stored value can be a comma-joined list (financial_rag equivalent doesn't
+        // apply here - AI merges duplicate emails describing the same event into one
+        // candidate with all their message ids joined) - split so each raw Gmail
+        // message id is individually recognized as already-imported.
+        return events.findImportedSourceEmailIds(userId).stream()
+                .flatMap(value -> Arrays.stream(value.split(",")))
+                .collect(Collectors.toSet());
+    }
+
     @Transactional
     public JobEvent addEvent(String userId, JobEventCreate payload) {
         JobEventEntity saved = events.save(new JobEventEntity(
                 "event-" + UUID.randomUUID().toString().substring(0, 10), userId, payload.title(), payload.eventType(),
-                payload.eventDate(), payload.expectedCost(), payload.memo() == null ? "" : payload.memo()
+                payload.eventDate(), payload.expectedCost(), payload.memo() == null ? "" : payload.memo(),
+                payload.sourceEmailId()
         ));
         return event(saved);
     }
@@ -145,7 +160,7 @@ public class PlannerStore {
     }
 
     private JobEvent event(JobEventEntity value) {
-        return new JobEvent(value.getId(), value.getUserId(), value.getTitle(), value.getEventType(), value.getEventDate(), value.getExpectedCost(), value.getMemo());
+        return new JobEvent(value.getId(), value.getUserId(), value.getTitle(), value.getEventType(), value.getEventDate(), value.getExpectedCost(), value.getMemo(), value.getSourceEmailId());
     }
 
     private FinancialRecord record(FinancialRecordEntity value) {

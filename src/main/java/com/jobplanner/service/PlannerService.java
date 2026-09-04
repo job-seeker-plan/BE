@@ -55,6 +55,7 @@ public class PlannerService {
         String status = targetBalance >= 500_000 ? "stable" : targetBalance >= 0 ? "caution" : "risk";
         Double monthsUntilShortage = shortageMonth == null ? (double) months.size() : (double) months.indexOf(shortageMonth) + 1;
 
+        GuideOutcome guideOutcome = guide(profile.userId(), status, targetBalance, shortageMonth, recommendedLimit);
         return new PlanAnalysis(
                 predictedSpend,
                 recentAverage,
@@ -67,7 +68,9 @@ public class PlannerService {
                 recommendedLimit,
                 status,
                 flows,
-                guide(profile.userId(), status, targetBalance, shortageMonth, recommendedLimit)
+                guideOutcome.text(),
+                guideOutcome.personalized(),
+                guideOutcome.contextCount()
         );
     }
 
@@ -176,23 +179,30 @@ public class PlannerService {
         return Long.parseLong(String.valueOf(value));
     }
 
-    private String guide(String userId, String status, long targetBalance, String shortageMonth, long recommendedLimit) {
+    private GuideOutcome guide(String userId, String status, long targetBalance, String shortageMonth, long recommendedLimit) {
         try {
             Map<String, Object> response = aiClient.buildFinancialGuide(userId, status, targetBalance, shortageMonth, recommendedLimit);
             Object guide = response.get("guide");
             if (guide != null && !String.valueOf(guide).isBlank()) {
-                return String.valueOf(guide);
+                boolean personalized = Boolean.TRUE.equals(response.get("personalized"));
+                int contextCount = (int) number(response.getOrDefault("context_count", 0));
+                return new GuideOutcome(String.valueOf(guide), personalized, contextCount);
             }
         } catch (RuntimeException ignored) {
             // The cash-flow calculation remains useful if the optional RAG
             // service is unavailable; use the same deterministic fallback.
         }
+        String fallback;
         if ("risk".equals(status)) {
-            return shortageMonth + "에 자금 부족이 예상됩니다. 월 지출을 " + String.format("%,d", recommendedLimit) + "원 이하로 낮추고 정책 지원을 우선 확인하세요.";
+            fallback = shortageMonth + "에 자금 부족이 예상됩니다. 월 지출을 " + String.format("%,d", recommendedLimit) + "원 이하로 낮추고 정책 지원을 우선 확인하세요.";
+        } else if ("caution".equals(status)) {
+            fallback = "목표 취업월까지 여유가 크지 않습니다. 다음 달 예상지출 변화와 면접·시험 비용을 같이 관리하세요.";
+        } else {
+            fallback = "목표 취업월까지 현금흐름은 안정권입니다. 취업 일정 비용을 캘린더에서 계속 관리하세요.";
         }
-        if ("caution".equals(status)) {
-            return "목표 취업월까지 여유가 크지 않습니다. 다음 달 예상지출 변화와 면접·시험 비용을 같이 관리하세요.";
-        }
-        return "목표 취업월까지 현금흐름은 안정권입니다. 취업 일정 비용을 캘린더에서 계속 관리하세요.";
+        return new GuideOutcome(fallback, false, 0);
+    }
+
+    private record GuideOutcome(String text, boolean personalized, int contextCount) {
     }
 }
