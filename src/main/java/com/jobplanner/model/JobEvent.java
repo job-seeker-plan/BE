@@ -12,7 +12,8 @@ public record JobEvent(
         JobEventType eventType,
         LocalDate eventDate,
         @Min(0) long expectedCost,
-        String memo
+        String memo,
+        String sourceEmailId
 ) {
 }
 

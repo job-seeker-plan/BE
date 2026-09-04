@@ -1,8 +1,16 @@
 package com.jobplanner.service;
 
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.jobplanner.config.AppProperties;
+import com.jobplanner.model.EmailEventCandidate;
+import com.jobplanner.model.EmailMessageInput;
+import com.jobplanner.model.EmailParseResponse;
 import com.jobplanner.model.FinancialRecord;
+import com.jobplanner.model.FinancialContextInput;
+import com.jobplanner.model.FinancialContextListResponse;
 import com.jobplanner.model.LinkareerRecruitmentResult;
+import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
@@ -28,9 +36,21 @@ public class AiClient {
                 .connectTimeout(Duration.ofSeconds(3))
                 .build());
         requestFactory.setReadTimeout(Duration.ofSeconds(10));
+        // RestClient.builder() here is a plain instance, not the Spring Boot-managed
+        // RestClient.Builder bean, so it does NOT inherit the app's
+        // spring.jackson.property-naming-strategy=SNAKE_CASE setting. Without this,
+        // Java record fields like FinancialRecord.creditScore serialize as
+        // camelCase, which the AI service's snake_case Pydantic schemas either
+        // reject (422) or silently ignore in favor of field defaults.
+        MappingJackson2HttpMessageConverter snakeCaseJson = new MappingJackson2HttpMessageConverter(
+                JsonMapper.builder().propertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE).build());
         this.restClient = RestClient.builder()
                 .baseUrl(properties.aiBaseUrl())
                 .requestFactory(requestFactory)
+                .messageConverters(converters -> {
+                    converters.removeIf(converter -> converter instanceof MappingJackson2HttpMessageConverter);
+                    converters.add(snakeCaseJson);
+                })
                 .build();
         this.serviceToken = properties.aiServiceToken();
     }
@@ -94,5 +114,66 @@ public class AiClient {
                 ))
                 .retrieve()
                 .body(LinkareerRecruitmentResult.class);
+    }
+
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> buildFinancialGuide(String userId, String status, long targetMonthBalance, String shortageMonth, long recommendedLimit) {
+        if (serviceToken == null || serviceToken.isBlank()) {
+            throw new IllegalStateException("AI_SERVICE_TOKEN is required");
+        }
+        return restClient.post()
+                .uri("/guide")
+                .header("X-Internal-Api-Key", serviceToken)
+                .body(Map.of(
+                        "user_id", userId,
+                        "status", status,
+                        "target_month_balance", targetMonthBalance,
+                        "shortage_month", shortageMonth == null ? "" : shortageMonth,
+                        "recommended_monthly_spend_limit", recommendedLimit,
+                        "related_category", "cashflow"
+                ))
+                .retrieve()
+                .body(Map.class);
+    }
+
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> saveFinancialContexts(String userId, List<FinancialContextInput> contexts) {
+        if (serviceToken == null || serviceToken.isBlank()) {
+            throw new IllegalStateException("AI_SERVICE_TOKEN is required");
+        }
+        return restClient.post()
+                .uri("/financial-contexts")
+                .header("X-Internal-Api-Key", serviceToken)
+                .body(Map.of("user_id", userId, "contexts", contexts))
+                .retrieve()
+                .body(Map.class);
+    }
+
+    public List<FinancialContextInput> listFinancialContexts(String userId) {
+        if (serviceToken == null || serviceToken.isBlank()) {
+            throw new IllegalStateException("AI_SERVICE_TOKEN is required");
+        }
+        FinancialContextListResponse response = restClient.get()
+                .uri(uriBuilder -> uriBuilder.path("/financial-contexts").queryParam("user_id", userId).build())
+                .header("X-Internal-Api-Key", serviceToken)
+                .retrieve()
+                .body(FinancialContextListResponse.class);
+        return response == null ? List.of() : response.contexts();
+    }
+
+    public List<EmailEventCandidate> parseEmailEvents(List<EmailMessageInput> messages) {
+        if (serviceToken == null || serviceToken.isBlank()) {
+            throw new IllegalStateException("AI_SERVICE_TOKEN is required");
+        }
+        if (messages.isEmpty()) {
+            return List.of();
+        }
+        EmailParseResponse response = restClient.post()
+                .uri("/email/parse-events")
+                .header("X-Internal-Api-Key", serviceToken)
+                .body(Map.of("messages", messages))
+                .retrieve()
+                .body(EmailParseResponse.class);
+        return response == null ? List.of() : response.events();
     }
 }

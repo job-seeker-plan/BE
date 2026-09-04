@@ -1,5 +1,7 @@
 package com.jobplanner.controller;
 
+import com.jobplanner.service.EmailImportService;
+import com.jobplanner.service.GmailService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -11,6 +13,16 @@ import java.util.Map;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
+    @ExceptionHandler(GmailService.GmailTokenExpiredException.class)
+    public ResponseEntity<Map<String, String>> handleGmailTokenExpired(GmailService.GmailTokenExpiredException error) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("detail", error.getMessage()));
+    }
+
+    @ExceptionHandler(EmailImportService.EmailImportUnsupportedException.class)
+    public ResponseEntity<Map<String, String>> handleEmailImportUnsupported(EmailImportService.EmailImportUnsupportedException error) {
+        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).body(Map.of("detail", error.getMessage()));
+    }
+
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<Map<String, String>> handleIllegalState(IllegalStateException error) {
         HttpStatus status = "Not authenticated".equals(error.getMessage()) ? HttpStatus.UNAUTHORIZED : HttpStatus.BAD_GATEWAY;

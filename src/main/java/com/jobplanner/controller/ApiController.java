@@ -3,6 +3,7 @@ package com.jobplanner.controller;
 import com.jobplanner.model.*;
 import com.jobplanner.config.AppProperties;
 import com.jobplanner.service.AiClient;
+import com.jobplanner.service.EmailImportService;
 import com.jobplanner.service.PlannerStore;
 import com.jobplanner.service.PlannerService;
 import com.jobplanner.service.TokenService;
@@ -23,13 +24,15 @@ public class ApiController {
     private final AppProperties properties;
     private final TokenService tokenService;
     private final AiClient aiClient;
+    private final EmailImportService emailImportService;
 
-    public ApiController(PlannerStore store, PlannerService plannerService, AppProperties properties, TokenService tokenService, AiClient aiClient) {
+    public ApiController(PlannerStore store, PlannerService plannerService, AppProperties properties, TokenService tokenService, AiClient aiClient, EmailImportService emailImportService) {
         this.store = store;
         this.plannerService = plannerService;
         this.properties = properties;
         this.tokenService = tokenService;
         this.aiClient = aiClient;
+        this.emailImportService = emailImportService;
     }
 
     @GetMapping("/health")
@@ -131,6 +134,17 @@ public class ApiController {
         return aiClient.searchLinkareerRecruitments(request.keyword(), request.categoryId(), request.regionId(), request.jobType(), request.page());
     }
 
+    @PostMapping("/financial-contexts")
+    public Map<String, Object> saveFinancialContexts(Authentication authentication, @Valid @RequestBody FinancialContextRequest request) {
+        AuthUser user = currentUser(authentication);
+        return aiClient.saveFinancialContexts(user.userId(), request.contexts());
+    }
+
+    @GetMapping("/financial-contexts")
+    public List<FinancialContextInput> financialContexts(Authentication authentication) {
+        return aiClient.listFinancialContexts(currentUser(authentication).userId());
+    }
+
     @GetMapping("/financial-records")
     public List<FinancialRecord> records(Authentication authentication) {
         return store.listRecords(currentUser(authentication).userId());
@@ -154,6 +168,11 @@ public class ApiController {
     @GetMapping("/plan")
     public PlanAnalysis plan(Authentication authentication) {
         return plannerService.buildPlan(requireProfile(authentication));
+    }
+
+    @GetMapping("/email/preview")
+    public List<EmailPreviewEvent> emailPreview(Authentication authentication) {
+        return emailImportService.preview(currentUser(authentication));
     }
 
     @GetMapping("/hiring/season")
