@@ -153,12 +153,7 @@ public class ApiController {
 
     @GetMapping("/plan")
     public PlanAnalysis plan(Authentication authentication) {
-        return plannerService.buildPlan(requireProfile(authentication), null);
-    }
-
-    @PostMapping("/scenario")
-    public PlanAnalysis scenario(Authentication authentication, @Valid @RequestBody ScenarioRequest request) {
-        return plannerService.buildPlan(requireProfile(authentication), request);
+        return plannerService.buildPlan(requireProfile(authentication));
     }
 
     @GetMapping("/hiring/season")
