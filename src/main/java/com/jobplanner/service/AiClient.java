@@ -2,6 +2,7 @@ package com.jobplanner.service;
 
 import com.jobplanner.config.AppProperties;
 import com.jobplanner.model.FinancialRecord;
+import com.jobplanner.model.LinkareerRecruitmentResult;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
@@ -74,5 +75,24 @@ public class AiClient {
                 .header("X-Internal-Api-Key", serviceToken)
                 .retrieve()
                 .body(List.class);
+    }
+
+    public LinkareerRecruitmentResult searchLinkareerRecruitments(String keyword, String categoryId, String regionId, String jobType, Integer page) {
+        if (serviceToken == null || serviceToken.isBlank()) {
+            throw new IllegalStateException("AI_SERVICE_TOKEN is required");
+        }
+        return restClient.post()
+                .uri("/crawl/linkareer/recruitments")
+                .header("X-Internal-Api-Key", serviceToken)
+                .body(Map.of(
+                        "keyword", keyword == null ? "" : keyword,
+                        "category_id", categoryId == null ? "" : categoryId,
+                        "region_id", regionId == null ? "" : regionId,
+                        "job_type", jobType == null ? "" : jobType,
+                        "page", page == null ? 1 : page,
+                        "limit", 20
+                ))
+                .retrieve()
+                .body(LinkareerRecruitmentResult.class);
     }
 }

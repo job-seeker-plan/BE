@@ -125,6 +125,12 @@ public class ApiController {
         return ResponseEntity.noContent().build();
     }
 
+    @PostMapping("/jobs/search")
+    public LinkareerRecruitmentResult searchRecruitments(Authentication authentication, @Valid @RequestBody RecruitmentSearchRequest request) {
+        currentUser(authentication);
+        return aiClient.searchLinkareerRecruitments(request.keyword(), request.categoryId(), request.regionId(), request.jobType(), request.page());
+    }
+
     @GetMapping("/financial-records")
     public List<FinancialRecord> records(Authentication authentication) {
         return store.listRecords(currentUser(authentication).userId());
