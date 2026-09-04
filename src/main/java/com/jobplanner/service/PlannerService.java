@@ -24,13 +24,12 @@ public class PlannerService {
         this.policyClient = policyClient;
     }
 
-    public PlanAnalysis buildPlan(UserProfile profile, ScenarioRequest scenario) {
+    public PlanAnalysis buildPlan(UserProfile profile) {
         List<FinancialRecord> records = monthlyRecordsFromTransactions(profile.userId(), store.listTransactions(profile.userId()));
         Map<String, Object> prediction = aiClient.predictSpending(profile.userId(), records);
         long predictedSpend = number(prediction.get("predicted_next_spend"));
         long recentAverage = number(prediction.get("recent_average_spend"));
-        Map<String, Long> eventCosts = aggregateEventCosts(profile.userId(), scenario);
-        Map<String, Long> policySupport = selectedPolicySupport(scenario);
+        Map<String, Long> eventCosts = aggregateEventCosts(profile.userId());
         List<String> months = monthRange(currentMonth(), profile.targetJobMonth());
 
         long cash = profile.availableCash();
@@ -38,7 +37,7 @@ public class PlannerService {
         List<MonthlyCashFlow> flows = new ArrayList<>();
         for (String month : months) {
             long opening = cash;
-            long support = policySupport.getOrDefault(month, 0L);
+            long support = 0L;
             long eventCost = eventCosts.getOrDefault(month, 0L);
             cash = cash + profile.monthlyIncome() + support - predictedSpend - eventCost;
             if (cash < 0 && shortageMonth == null) {
@@ -146,24 +145,13 @@ public class PlannerService {
         return MatchedPolicy.from(policy, score, matched, missing);
     }
 
-    private Map<String, Long> aggregateEventCosts(String userId, ScenarioRequest scenario) {
+    private Map<String, Long> aggregateEventCosts(String userId) {
         Map<String, Long> costs = new HashMap<>();
         for (JobEvent event : store.listEvents(userId)) {
             String month = YearMonth.from(event.eventDate()).toString();
             costs.merge(month, event.expectedCost(), Long::sum);
         }
-        if (scenario != null && scenario.extraMonth() != null && scenario.extraCost() > 0) {
-            costs.merge(scenario.extraMonth(), scenario.extraCost(), Long::sum);
-        }
         return costs;
-    }
-
-    private Map<String, Long> selectedPolicySupport(ScenarioRequest scenario) {
-        if (scenario == null || scenario.confirmedSupportAmount() == 0 || scenario.confirmedSupportMonth() == null
-                || scenario.policyIds() == null || scenario.policyIds().isEmpty()) {
-            return Map.of();
-        }
-        return Map.of(scenario.confirmedSupportMonth(), scenario.confirmedSupportAmount());
     }
 
     private List<String> monthRange(String start, String end) {
