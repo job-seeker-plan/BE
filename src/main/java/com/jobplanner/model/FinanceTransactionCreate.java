@@ -11,6 +11,7 @@ public record FinanceTransactionCreate(
         @NotNull FinanceTransactionType type,
         @NotBlank String category,
         @Min(0) long amount,
-        String memo
+        String memo,
+        boolean deductFromAvailableCash
 ) {
 }

@@ -21,11 +21,12 @@ public class FinanceTransactionEntity {
     private String category;
     private long amount;
     private String memo;
+    private boolean deductFromAvailableCash;
 
     protected FinanceTransactionEntity() {
     }
 
-    public FinanceTransactionEntity(String id, String userId, LocalDate occurredOn, FinanceTransactionType type, String category, long amount, String memo) {
+    public FinanceTransactionEntity(String id, String userId, LocalDate occurredOn, FinanceTransactionType type, String category, long amount, String memo, boolean deductFromAvailableCash) {
         this.id = id;
         this.userId = userId;
         this.occurredOn = occurredOn;
@@ -33,6 +34,7 @@ public class FinanceTransactionEntity {
         this.category = category;
         this.amount = amount;
         this.memo = memo;
+        this.deductFromAvailableCash = deductFromAvailableCash;
     }
 
     public String getId() { return id; }
@@ -42,10 +44,12 @@ public class FinanceTransactionEntity {
     public String getCategory() { return category; }
     public long getAmount() { return amount; }
     public String getMemo() { return memo; }
+    public boolean isDeductFromAvailableCash() { return deductFromAvailableCash; }
 
     public void setOccurredOn(LocalDate occurredOn) { this.occurredOn = occurredOn; }
     public void setType(FinanceTransactionType type) { this.type = type; }
     public void setCategory(String category) { this.category = category; }
     public void setAmount(long amount) { this.amount = amount; }
     public void setMemo(String memo) { this.memo = memo; }
+    public void setDeductFromAvailableCash(boolean deductFromAvailableCash) { this.deductFromAvailableCash = deductFromAvailableCash; }
 }

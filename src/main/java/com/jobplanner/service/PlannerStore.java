@@ -2,6 +2,7 @@ package com.jobplanner.service;
 
 import com.jobplanner.model.FinanceTransaction;
 import com.jobplanner.model.FinanceTransactionCreate;
+import com.jobplanner.model.FinanceTransactionType;
 import com.jobplanner.model.FinancialRecord;
 import com.jobplanner.model.FinancialRecordCreate;
 import com.jobplanner.model.JobEvent;
@@ -111,25 +112,48 @@ public class PlannerStore {
     public FinanceTransaction addTransaction(String userId, FinanceTransactionCreate payload) {
         FinanceTransactionEntity saved = transactions.save(new FinanceTransactionEntity(
                 "txn-" + UUID.randomUUID().toString().substring(0, 10), userId, payload.occurredOn(), payload.type(),
-                payload.category(), payload.amount(), payload.memo() == null ? "" : payload.memo()
+                payload.category(), payload.amount(), payload.memo() == null ? "" : payload.memo(), payload.deductFromAvailableCash()
         ));
+        adjustAvailableCash(userId, -deductionEffect(payload.type(), payload.amount(), payload.deductFromAvailableCash()));
         return transaction(saved);
     }
 
     @Transactional
     public FinanceTransaction updateTransaction(String id, String userId, FinanceTransactionCreate payload) {
         FinanceTransactionEntity entity = requireOwnedTransaction(id, userId);
+        long previousEffect = deductionEffect(entity.getType(), entity.getAmount(), entity.isDeductFromAvailableCash());
         entity.setOccurredOn(payload.occurredOn());
         entity.setType(payload.type());
         entity.setCategory(payload.category());
         entity.setAmount(payload.amount());
         entity.setMemo(payload.memo() == null ? "" : payload.memo());
-        return transaction(transactions.save(entity));
+        entity.setDeductFromAvailableCash(payload.deductFromAvailableCash());
+        FinanceTransaction saved = transaction(transactions.save(entity));
+        long nextEffect = deductionEffect(payload.type(), payload.amount(), payload.deductFromAvailableCash());
+        adjustAvailableCash(userId, previousEffect - nextEffect);
+        return saved;
     }
 
     @Transactional
     public void deleteTransaction(String id, String userId) {
-        transactions.delete(requireOwnedTransaction(id, userId));
+        FinanceTransactionEntity entity = requireOwnedTransaction(id, userId);
+        long effect = deductionEffect(entity.getType(), entity.getAmount(), entity.isDeductFromAvailableCash());
+        transactions.delete(entity);
+        adjustAvailableCash(userId, effect);
+    }
+
+    private long deductionEffect(FinanceTransactionType type, long amount, boolean deductFromAvailableCash) {
+        return type == FinanceTransactionType.expense && deductFromAvailableCash ? amount : 0;
+    }
+
+    private void adjustAvailableCash(String userId, long delta) {
+        if (delta == 0) {
+            return;
+        }
+        profiles.findById(userId).ifPresent(entity -> {
+            entity.setAvailableCash(entity.getAvailableCash() + delta);
+            profiles.save(entity);
+        });
     }
 
     private FinanceTransactionEntity requireOwnedTransaction(String id, String userId) {
@@ -168,6 +192,6 @@ public class PlannerStore {
     }
 
     private FinanceTransaction transaction(FinanceTransactionEntity value) {
-        return new FinanceTransaction(value.getId(), value.getUserId(), value.getOccurredOn(), value.getType(), value.getCategory(), value.getAmount(), value.getMemo());
+        return new FinanceTransaction(value.getId(), value.getUserId(), value.getOccurredOn(), value.getType(), value.getCategory(), value.getAmount(), value.getMemo(), value.isDeductFromAvailableCash());
     }
 }
