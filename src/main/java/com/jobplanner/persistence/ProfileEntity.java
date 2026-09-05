@@ -43,4 +43,6 @@ public class ProfileEntity {
     public EmploymentStatus getEmploymentStatus() { return employmentStatus; }
     public long getMonthlyIncomeForPolicy() { return monthlyIncomeForPolicy; }
     public String getTargetJobMonth() { return targetJobMonth; }
+
+    public void setAvailableCash(long availableCash) { this.availableCash = availableCash; }
 }
