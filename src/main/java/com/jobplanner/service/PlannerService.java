@@ -26,9 +26,9 @@ public class PlannerService {
 
     public PlanAnalysis buildPlan(UserProfile profile) {
         List<FinancialRecord> records = monthlyRecordsFromTransactions(profile.userId(), store.listTransactions(profile.userId()));
-        Map<String, Object> prediction = aiClient.predictSpending(profile.userId(), records);
-        long predictedSpend = number(prediction.get("predicted_next_spend"));
-        long recentAverage = number(prediction.get("recent_average_spend"));
+        SpendPrediction spendPrediction = predictSpend(profile.userId(), records);
+        long predictedSpend = spendPrediction.predictedSpend();
+        long recentAverage = spendPrediction.recentAverage();
         Map<String, Long> eventCosts = aggregateEventCosts(profile.userId());
         List<String> months = monthRange(currentMonth(), profile.targetJobMonth());
 
@@ -177,6 +177,25 @@ public class PlannerService {
             return number.longValue();
         }
         return Long.parseLong(String.valueOf(value));
+    }
+
+    private SpendPrediction predictSpend(String userId, List<FinancialRecord> records) {
+        // A brand-new user has no ledger entries yet, so there's nothing to predict
+        // from - skip the AI call entirely rather than sending it an empty history.
+        if (records.isEmpty()) {
+            return new SpendPrediction(0L, 0L);
+        }
+        try {
+            Map<String, Object> response = aiClient.predictSpending(userId, records);
+            return new SpendPrediction(number(response.get("predicted_next_spend")), number(response.get("recent_average_spend")));
+        } catch (RuntimeException ignored) {
+            // The cash-flow calculation remains useful even if the prediction
+            // service is unavailable or errors out; same fallback strategy as guide().
+            return new SpendPrediction(0L, 0L);
+        }
+    }
+
+    private record SpendPrediction(long predictedSpend, long recentAverage) {
     }
 
     private GuideOutcome guide(String userId, String status, long targetBalance, String shortageMonth, long recommendedLimit) {
