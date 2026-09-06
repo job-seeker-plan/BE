@@ -131,7 +131,7 @@ public class ApiController {
     @PostMapping("/jobs/search")
     public LinkareerRecruitmentResult searchRecruitments(Authentication authentication, @Valid @RequestBody RecruitmentSearchRequest request) {
         currentUser(authentication);
-        return aiClient.searchLinkareerRecruitments(request.keyword(), request.categoryId(), request.regionId(), request.jobType(), request.page());
+        return aiClient.searchLinkareerRecruitments(request.keyword(), request.categoryId(), request.regionId(), request.jobType(), request.page(), request.regionName(), request.experience(), request.deadlineWithinDays());
     }
 
     @PostMapping("/financial-contexts")

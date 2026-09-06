@@ -8,6 +8,9 @@ public record RecruitmentSearchRequest(
         @Size(max = 20) String categoryId,
         @Size(max = 20) String regionId,
         @Size(max = 20) String jobType,
-        @Min(1) Integer page
+        @Min(1) Integer page,
+        @Size(max = 20) String regionName,
+        @Size(max = 20) String experience,
+        @Min(0) Integer deadlineWithinDays
 ) {
 }
