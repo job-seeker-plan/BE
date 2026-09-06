@@ -14,6 +14,18 @@ import java.util.TreeMap;
 
 @Service
 public class PlannerService {
+    private static final Map<String, String> EVENT_TYPE_LABELS = Map.ofEntries(
+            Map.entry("document_deadline", "서류 마감"),
+            Map.entry("coding_test", "코딩테스트"),
+            Map.entry("aptitude_test", "인적성"),
+            Map.entry("interview", "면접"),
+            Map.entry("language_test", "어학시험"),
+            Map.entry("certificate", "자격증"),
+            Map.entry("education", "교육"),
+            Map.entry("lecture", "강의"),
+            Map.entry("other", "기타")
+    );
+
     private final PlannerStore store;
     private final AiClient aiClient;
     private final YouthPolicyClient policyClient;
@@ -55,7 +67,8 @@ public class PlannerService {
         String status = targetBalance >= 500_000 ? "stable" : targetBalance >= 0 ? "caution" : "risk";
         Double monthsUntilShortage = shortageMonth == null ? (double) months.size() : (double) months.indexOf(shortageMonth) + 1;
 
-        GuideOutcome guideOutcome = guide(profile.userId(), status, targetBalance, shortageMonth, recommendedLimit);
+        JobEvent nextEvent = findNextEvent(profile.userId());
+        GuideOutcome guideOutcome = guide(profile.userId(), status, targetBalance, shortageMonth, recommendedLimit, nextEvent);
         return new PlanAnalysis(
                 predictedSpend,
                 recentAverage,
@@ -146,6 +159,14 @@ public class PlannerService {
         return MatchedPolicy.from(policy, score, matched, missing);
     }
 
+    private JobEvent findNextEvent(String userId) {
+        LocalDate today = LocalDate.now();
+        return store.listEvents(userId).stream()
+                .filter(event -> !event.eventDate().isBefore(today))
+                .min(Comparator.comparing(JobEvent::eventDate))
+                .orElse(null);
+    }
+
     private Map<String, Long> aggregateEventCosts(String userId) {
         Map<String, Long> costs = new HashMap<>();
         for (JobEvent event : store.listEvents(userId)) {
@@ -196,9 +217,9 @@ public class PlannerService {
     private record SpendPrediction(long predictedSpend, long recentAverage) {
     }
 
-    private GuideOutcome guide(String userId, String status, long targetBalance, String shortageMonth, long recommendedLimit) {
+    private GuideOutcome guide(String userId, String status, long targetBalance, String shortageMonth, long recommendedLimit, JobEvent nextEvent) {
         try {
-            Map<String, Object> response = aiClient.buildFinancialGuide(userId, status, targetBalance, shortageMonth, recommendedLimit);
+            Map<String, Object> response = aiClient.buildFinancialGuide(userId, status, targetBalance, shortageMonth, recommendedLimit, nextEvent);
             Object guide = response.get("guide");
             if (guide != null && !String.valueOf(guide).isBlank()) {
                 boolean personalized = Boolean.TRUE.equals(response.get("personalized"));
@@ -216,6 +237,10 @@ public class PlannerService {
             fallback = "목표 취업월까지 여유가 크지 않습니다. 다음 달 예상지출 변화와 면접·시험 비용을 같이 관리하세요.";
         } else {
             fallback = "목표 취업월까지 현금흐름은 안정권입니다. 취업 일정 비용을 캘린더에서 계속 관리하세요.";
+        }
+        if (nextEvent != null) {
+            String label = EVENT_TYPE_LABELS.getOrDefault(nextEvent.eventType().name(), nextEvent.eventType().name());
+            fallback += " 가장 가까운 일정은 " + nextEvent.eventDate() + "의 " + nextEvent.title() + "(" + label + ")이니 이것부터 준비하세요.";
         }
         return new GuideOutcome(fallback, false, 0);
     }
