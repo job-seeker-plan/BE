@@ -99,7 +99,7 @@ public class PlannerService {
     }
 
     public List<MatchedPolicy> matchPolicies(UserProfile profile) {
-        return policyClient.fetchPolicies(new PolicySearchRequest(1, 100, null, "취업", "일자리", null, null, null)).stream()
+        return policyClient.fetchAllPolicies(new PolicySearchRequest(1, 100, null, null, "일자리", "취업", null, null)).stream()
                 .map(policy -> matchPolicy(policy, profile))
                 .sorted(Comparator.comparing(MatchedPolicy::matchScore).reversed())
                 .toList();
@@ -121,9 +121,7 @@ public class PlannerService {
         } else {
             missing.add("연령 조건 불일치");
         }
-        if (!policy.regionCodes().isEmpty()) {
-            missing.add("지역 코드 공고 확인 필요");
-        } else if ("전국".equals(policy.region()) || policy.region().contains(profile.region())) {
+        if ("전국".equals(policy.region()) || policy.regionCodes().contains(profile.region())) {
             score += 25;
             matched.add("지역 조건 일치");
         } else {

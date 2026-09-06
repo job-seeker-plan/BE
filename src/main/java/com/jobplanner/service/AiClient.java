@@ -97,7 +97,7 @@ public class AiClient {
                 .body(List.class);
     }
 
-    public LinkareerRecruitmentResult searchLinkareerRecruitments(String keyword, String categoryId, String regionId, String jobType, Integer page) {
+    public LinkareerRecruitmentResult searchLinkareerRecruitments(String keyword, String categoryId, String regionId, String jobType, Integer page, String regionName, String experience, Integer deadlineWithinDays) {
         if (serviceToken == null || serviceToken.isBlank()) {
             throw new IllegalStateException("AI_SERVICE_TOKEN is required");
         }
@@ -110,7 +110,10 @@ public class AiClient {
                         "region_id", regionId == null ? "" : regionId,
                         "job_type", jobType == null ? "" : jobType,
                         "page", page == null ? 1 : page,
-                        "limit", 20
+                        "limit", 20,
+                        "region_name", regionName == null ? "" : regionName,
+                        "experience", experience == null ? "" : experience,
+                        "deadline_within_days", deadlineWithinDays == null ? 0 : deadlineWithinDays
                 ))
                 .retrieve()
                 .body(LinkareerRecruitmentResult.class);
