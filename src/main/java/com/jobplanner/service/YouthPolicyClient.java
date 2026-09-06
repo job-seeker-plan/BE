@@ -109,7 +109,21 @@ public class YouthPolicyClient {
         for (int page = Math.max(1, base.page()); page <= 100; page++) {
             PolicySearchRequest pageRequest = new PolicySearchRequest(
                     page, pageSize, base.plcyNm(), base.plcyKywdNm(), base.lclsfNm(), base.mclsfNm(), base.zipCd(), base.plcyNo());
-            List<Policy> pagePolicies = fetchPolicies(pageRequest);
+            List<Policy> pagePolicies;
+            try {
+                pagePolicies = fetchPolicies(pageRequest);
+            } catch (IllegalStateException error) {
+                // 온통청년 API가 페이지 하나에만 간헐적으로 500을 던지는 게 실제로 확인됨
+                // (8페이지 중 6번째 페이지만 실패, 나머지는 정상) - 한 번 재시도해서 대부분
+                // 넘기고, 그래도 안 되면 지금까지 모은 결과라도 반환한다. 여기서 그냥
+                // 예외를 던지면 /policies/matches 전체가 매번 이 일시적 오류 하나 때문에
+                // 500으로 죽는다.
+                try {
+                    pagePolicies = fetchPolicies(pageRequest);
+                } catch (IllegalStateException retryError) {
+                    break;
+                }
+            }
             allPolicies.addAll(pagePolicies);
             if (pagePolicies.size() < pageSize) {
                 break;
