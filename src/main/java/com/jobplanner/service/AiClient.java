@@ -9,6 +9,7 @@ import com.jobplanner.model.EmailParseResponse;
 import com.jobplanner.model.FinancialRecord;
 import com.jobplanner.model.FinancialContextInput;
 import com.jobplanner.model.FinancialContextListResponse;
+import com.jobplanner.model.JobEvent;
 import com.jobplanner.model.LinkareerRecruitmentResult;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
@@ -17,6 +18,7 @@ import org.springframework.web.client.RestClient;
 
 import java.net.http.HttpClient;
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -120,21 +122,34 @@ public class AiClient {
     }
 
     @SuppressWarnings("unchecked")
-    public Map<String, Object> buildFinancialGuide(String userId, String status, long targetMonthBalance, String shortageMonth, long recommendedLimit) {
+    // nextEvent lets the guide reason across two previously-separate agents in one
+    // call: the cash-flow numbers (this method's other params) and the user's
+    // nearest upcoming job-search deadline, so the generated text can explain
+    // both "왜 지금 지출을 줄여야 하는지" and "왜 이 일정부터 챙겨야 하는지" together
+    // instead of two disconnected pieces of advice.
+    public Map<String, Object> buildFinancialGuide(String userId, String status, long targetMonthBalance, String shortageMonth, long recommendedLimit, JobEvent nextEvent) {
         if (serviceToken == null || serviceToken.isBlank()) {
             throw new IllegalStateException("AI_SERVICE_TOKEN is required");
+        }
+        Map<String, Object> body = new HashMap<>(Map.of(
+                "user_id", userId,
+                "status", status,
+                "target_month_balance", targetMonthBalance,
+                "shortage_month", shortageMonth == null ? "" : shortageMonth,
+                "recommended_monthly_spend_limit", recommendedLimit,
+                "related_category", "cashflow"
+        ));
+        if (nextEvent != null) {
+            body.put("next_event", Map.of(
+                    "title", nextEvent.title(),
+                    "event_type", nextEvent.eventType().name(),
+                    "event_date", nextEvent.eventDate().toString()
+            ));
         }
         return restClient.post()
                 .uri("/guide")
                 .header("X-Internal-Api-Key", serviceToken)
-                .body(Map.of(
-                        "user_id", userId,
-                        "status", status,
-                        "target_month_balance", targetMonthBalance,
-                        "shortage_month", shortageMonth == null ? "" : shortageMonth,
-                        "recommended_monthly_spend_limit", recommendedLimit,
-                        "related_category", "cashflow"
-                ))
+                .body(body)
                 .retrieve()
                 .body(Map.class);
     }
