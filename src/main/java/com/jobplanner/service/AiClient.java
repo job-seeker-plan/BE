@@ -37,7 +37,11 @@ public class AiClient {
                 .version(HttpClient.Version.HTTP_1_1)
                 .connectTimeout(Duration.ofSeconds(3))
                 .build());
-        requestFactory.setReadTimeout(Duration.ofSeconds(10));
+        // Job search (/jobs/search) can crawl a few Linkareer pages sequentially,
+        // each launching a headless browser (see AI/app/linkareer_macro.py); 10s
+        // was too tight for that and caused spurious 502s on otherwise-successful
+        // searches. Other AiClient calls are simple JSON round-trips well under this.
+        requestFactory.setReadTimeout(Duration.ofSeconds(30));
         // RestClient.builder() here is a plain instance, not the Spring Boot-managed
         // RestClient.Builder bean, so it does NOT inherit the app's
         // spring.jackson.property-naming-strategy=SNAKE_CASE setting. Without this,
